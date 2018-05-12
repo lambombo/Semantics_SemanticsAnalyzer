@@ -112,3 +112,7 @@ settings.json
 
 # coverage
 tmp/
+
+# pytest
+.pytest_cache
+test-reports
