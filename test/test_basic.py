@@ -16,6 +16,7 @@ class BasicsTestCase(unittest.TestCase):
         self.assertFalse(current_app is None)
 
     def test_app_is_testing(self):
+        print(current_app.config)
         self.assertTrue(current_app.config['TESTING'])
 
 class BasicEmptyConfigTestCase(unittest.TestCase):
@@ -31,4 +32,5 @@ class BasicEmptyConfigTestCase(unittest.TestCase):
         self.assertFalse(current_app is None)
 
     def test_app_is_testing(self):
-        self.assertTrue(current_app.config['DEVELOPMENT'])
+        print(current_app.config['TESTING'])
+        self.assertFalse(current_app.config['TESTING'])
