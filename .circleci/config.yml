@@ -51,7 +51,7 @@ jobs:
             mkdir test-reports
             pytest --junitxml=test-reports/junit.xml
           post:
-            coveralls
+            coveralls 
 
       - store_test_results:
           path: test-reports
@@ -59,4 +59,70 @@ jobs:
       - store_artifacts:
           path: test-reports   
           destination: test-reports
-          
+  push:
+    machine:
+      docker_layer_caching: true
+      enabled: true
+    working_directory: ~/repo
+    environment:
+      IMAGE_REPO: lambombo/semantics_sentenceanalyzer
+      TARGET: ubuntu-14.04-XXL
+      _TARGET: ubuntu-14_04-XXL
+    steps:
+      - checkout
+      - run: echo -n "$(git rev-parse --short HEAD)" > _tag
+      - run: echo "Building $IMAGE_REPO:$(cat _tag)"
+      - run:
+          command: |
+            docker build \
+            $NO_CACHE \
+            --build-arg IMAGE_TAG=$(cat _tag) \
+            -t $IMAGE_REPO:$(cat _tag) \
+            .
+
+      - run: docker rm --force $TARGET-test || true
+
+      - run:
+          command: |
+            docker run -d \
+                       -p 80:5000 --name $TARGET-test \
+                       $IMAGE_REPO:$(cat _tag)
+            sleep 20
+      - run: curl localhost
+
+      - run: docker rm --force $TARGET-test || true
+
+      - run: docker login -u $DOCKER_USER -p $DOCKER_PASS
+
+      - run: |
+      if [ $CIRCLE_BRANCH = ‘master’ ]; then
+        for i in 1 2 3; do
+          docker push $IMAGE_REPO:$(cat _tag)
+          if [ $? -eq 0 ]; then
+            exit 0
+          fi
+          echo "Retrying...."
+        done
+        exit 1
+      fi
+      - run:
+          command: |
+            if [ $CIRCLE_BRANCH = ‘master’ ]; then            
+              docker run -d \
+                        -p 81:5000 --name $TARGET-test \
+                        $IMAGE_REPO:$(cat _tag)
+              sleep 20
+      - run: |
+        if [ $CIRCLE_BRANCH = 'master'; then
+          curl localhost:81
+        fi
+
+workflows:
+  version: 2
+  build/test-and-push:
+    jobs:
+      - build
+      - push:
+          context: dockerhub
+          requires:
+            - build
