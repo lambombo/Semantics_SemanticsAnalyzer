@@ -1,5 +1,6 @@
 # Python CircleCI 2.0 configuration file
 #
+
 # Check https://circleci.com/docs/2.0/language-python/ for more details
 #
 version: 2
@@ -65,7 +66,7 @@ jobs:
       enabled: true
     working_directory: ~/repo
     environment:
-      IMAGE_REPO: lambombo/semantics_sentenceanalyzer
+      IMAGE_REPO: lambombo/semantics_sentimentanalyzer
       TARGET: ubuntu-14.04-XXL
       _TARGET: ubuntu-14_04-XXL
     steps:
@@ -88,38 +89,43 @@ jobs:
                        -p 80:5000 --name $TARGET-test \
                        $IMAGE_REPO:$(cat _tag)
             sleep 20
+
       - run: curl localhost
 
       - run: docker rm --force $TARGET-test || true
 
       - run: docker login -u $DOCKER_USER -p $DOCKER_PASS
 
-      - run: |
-      if [ $CIRCLE_BRANCH = ‘master’ ]; then
-        for i in 1 2 3; do
-          docker push $IMAGE_REPO:$(cat _tag)
-          if [ $? -eq 0 ]; then
-            exit 0
-          fi
-          echo "Retrying...."
-        done
-        exit 1
-      fi
+      - run: 
+          command: |
+            if [ $CIRCLE_BRANCH = "master" ]; then
+              for i in 1 2 3; do
+                docker push $IMAGE_REPO:$(cat _tag)
+                if [ $? -eq 0 ]; then
+                  exit 0
+                fi
+                echo "Retrying...."
+              done
+              exit 1
+            fi
+
       - run:
           command: |
-            if [ $CIRCLE_BRANCH = ‘master’ ]; then            
+            if [ $CIRCLE_BRANCH = "master" ]; then            
               docker run -d \
-                        -p 81:5000 --name $TARGET-test \
+                        -p 80:5000 --name $TARGET-test \
                         $IMAGE_REPO:$(cat _tag)
               sleep 20
-      - run: |
-        if [ $CIRCLE_BRANCH = 'master'; then
-          curl localhost:81
-        fi
+            fi
+      - run: 
+          command: |
+            if [ $CIRCLE_BRANCH = "master" ]; then
+              curl localhost
+            fi
 
 workflows:
   version: 2
-  build/test-and-push:
+  build-test-and-push:
     jobs:
       - build
       - push:
